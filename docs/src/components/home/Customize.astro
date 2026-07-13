@@ -1,0 +1,210 @@
+---
+const knobs = [
+  'Prompts',
+  'Model',
+  'Effort',
+  'Agent chaining',
+  'Max turns',
+  'Max iterations (for loops)',
+  'Harness configuration (MCPs, tools, settings, hooks, etc.)',
+];
+
+const commands = [
+  { cmd: 'npx autoducks wizard', desc: 'Wizard' },
+  { cmd: 'npx autoducks config', desc: 'TUI config editor' },
+];
+
+const scopes = [
+  { name: 'Global', detail: 'defaults across every agent' },
+  { name: 'Per-agent', detail: 'overrides for one role' },
+  { name: 'Per-run', detail: 'inline in the comment' },
+];
+---
+
+<section class="customize not-content">
+  <header class="customize__header">
+    <h2 class="customize__title"><span class="grad-word">Customize</span> everything</h2>
+    <p class="customize__lede">
+      You can set global defaults, agent-specific defaults, or override them per workflow run.
+    </p>
+  </header>
+
+  <div class="customize__body">
+    <ul class="customize__knobs">
+      {knobs.map((knob) => <li class="customize__knob">{knob}</li>)}
+    </ul>
+
+    <!--
+    <ol class="customize__scopes" aria-label="Override scopes, broad to specific">
+      {
+        scopes.map((scope) => (
+          <li class="customize__scope">
+            <span class="customize__scope-name">{scope.name}</span>
+            <span class="customize__scope-detail">{scope.detail}</span>
+          </li>
+        ))
+      }
+    </ol>
+    -->
+  </div>
+
+  <div class="customize__commands">
+    {
+      commands.map((entry) => (
+        <div class="customize__command">
+          <pre class="customize__snippet"><code>{entry.cmd}</code></pre>
+          <p class="customize__command-desc">{entry.desc}</p>
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .customize {
+    margin: 10rem auto;
+    max-width: 64rem;
+    padding-inline: 1rem;
+  }
+
+  .customize__header {
+    max-width: 42rem;
+    margin: 0 auto 2rem;
+    text-align: center;
+  }
+
+  .customize__title {
+    margin: 0 0 0.9rem;
+    color: var(--sl-color-white);
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem);
+    font-weight: 600;
+  }
+
+  .customize__title::after {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    margin: 0.9rem auto 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--sl-color-accent), var(--sl-color-accent-high));
+  }
+
+  .customize__lede {
+    margin: 0;
+    color: var(--sl-color-gray-2);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .customize__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1.5rem 2.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .customize__knobs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    max-width: 34rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .customize__knob {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    background: var(--sl-color-gray-6);
+    color: var(--sl-color-gray-1);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .customize__scopes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: scope;
+  }
+
+  .customize__scope {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.5rem 0.9rem;
+    border-left: 2px solid var(--sl-color-accent);
+    background: var(--sl-color-gray-6);
+    border-radius: 0 0.4rem 0.4rem 0;
+  }
+
+  .customize__scope-name {
+    color: var(--sl-color-white);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .customize__scope-detail {
+    color: var(--sl-color-gray-3);
+    font-size: 0.75rem;
+  }
+
+  .customize__commands {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1rem;
+  }
+
+  .customize__command {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.25rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    background: var(--sl-color-gray-6);
+  }
+
+  .customize__snippet {
+    margin: 0;
+    padding: 0.7rem 1rem;
+    overflow-x: auto;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    background: var(--sl-color-gray-7);
+    color: var(--sl-color-gray-1);
+    font-family: var(--__sl-font-mono);
+    font-size: 0.85rem;
+    white-space: pre;
+  }
+
+  .customize__snippet code {
+    background: transparent;
+    padding: 0;
+    border: none;
+    color: inherit;
+    font: inherit;
+  }
+
+  .customize__snippet code::before {
+    content: '$ ';
+    color: var(--sl-color-gray-3);
+  }
+
+  .customize__command-desc {
+    margin: 0;
+    color: var(--sl-color-gray-2);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+</style>

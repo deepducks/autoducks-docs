@@ -1,0 +1,10 @@
+---
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+
+// Splash pages (the home) supply their own hero heading, so suppress
+// Starlight's automatic <h1 id="_top"> title there. Every other page keeps
+// the default page title.
+const isSplash = Astro.locals.starlightRoute.entry.data.template === 'splash';
+---
+
+{!isSplash && <Default />}

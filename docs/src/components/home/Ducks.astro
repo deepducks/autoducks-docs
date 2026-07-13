@@ -1,0 +1,90 @@
+---
+import { DUCKS } from '../../lib/home/ducks';
+import DuckCard from './DuckCard.astro';
+---
+
+<section class="ducks not-content">
+  <header class="ducks__header">
+    <h2 class="ducks__title">Meet your <span class="grad-word">ducks</span></h2>
+    <p class="ducks__lede">
+      Autoducks comes with a set of workflows to automate and orchestrate fully-remote Claude Code
+      agents inside your GitHub repository.
+    </p>
+    <p class="ducks__lede">
+      You can use <strong>slash commands</strong> manually or configure autoducks
+      to <strong>run automatically</strong> on events.
+    </p>
+  </header>
+
+  <ul class="ducks__grid">
+    {
+      DUCKS.map((duck) => (
+        <li>
+          <DuckCard duck={duck} />
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .ducks {
+    margin: 10rem auto;
+    max-width: 74rem;
+    padding-inline: 1rem;
+  }
+
+  .ducks__header {
+    max-width: 42rem;
+    margin: 0 auto 2rem;
+    text-align: center;
+  }
+
+  .ducks__title {
+    margin: 0 0 0.9rem;
+    color: var(--sl-color-white);
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem);
+    font-weight: 600;
+  }
+
+  .ducks__title::after {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    margin: 0.9rem auto 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--sl-color-accent), var(--sl-color-accent-high));
+  }
+
+  .ducks__lede {
+    margin: 0;
+    color: var(--sl-color-gray-2);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .ducks__lede + .ducks__lede {
+    margin-top: 1rem;
+  }
+
+  .ducks__lede strong {
+    color: var(--sl-color-accent-high);
+    font-weight: 600;
+  }
+
+  .ducks__grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ducks__grid > li {
+    flex: 1 1 17rem;
+    max-width: 20rem;
+  }
+</style>

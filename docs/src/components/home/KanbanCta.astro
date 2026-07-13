@@ -5,10 +5,17 @@ import boardLight from '../../assets/home/board-cta-light.png';
 
 <section class="kanban-cta not-content">
   <div class="kanban-cta__copy">
-    <h2 class="kanban-cta__title">See your pipeline as a board</h2>
+    <h2 class="kanban-cta__title"><span class="grad-word">Visualize</span> the workflows</h2>
     <p class="kanban-cta__tagline">
-      Visualize your autoducks-installed repo with the interactive Kanban board.
+      See or trigger your autoducks-powered workflows with the Autoducks Board.
     </p>
+
+    <ul class="kanban-cta__features">
+      <li>Columns per stage</li>
+      <li>In-progress / done lanes</li>
+      <li>PR and workflow run links</li>
+      <li>Auto trigger on drag</li>
+    </ul>
 
     <form class="kanban-cta__form" id="kanban-cta-form" action="/dashboard" method="get" novalidate>
       <label class="kanban-cta__label" for="kanban-cta-repo">Repository</label>
@@ -102,7 +109,7 @@ import boardLight from '../../assets/home/board-cta-light.png';
     align-items: center;
     justify-content: center;
     gap: 2.5rem;
-    margin: 2.5rem auto;
+    margin: 10rem auto;
     max-width: 64rem;
     padding-inline: 1rem;
   }
@@ -121,12 +128,50 @@ import boardLight from '../../assets/home/board-cta-light.png';
     font-size: clamp(1.25rem, 1rem + 1vw, 1.75rem);
   }
 
+  .kanban-cta__title::after {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    margin: 0.75rem 0 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--sl-color-accent), var(--sl-color-accent-high));
+  }
+
   .kanban-cta__tagline {
     margin: 0;
     max-width: 32rem;
     color: var(--sl-color-gray-2);
     font-size: 0.95rem;
     line-height: 1.6;
+  }
+
+  .kanban-cta__features {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .kanban-cta__features li {
+    position: relative;
+    padding-left: 1.25rem;
+    color: var(--sl-color-gray-2);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .kanban-cta__features li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5rem;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--sl-color-accent);
   }
 
   .kanban-cta__form {

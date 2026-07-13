@@ -1,0 +1,171 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import type { Duck } from '../../lib/home/ducks';
+
+interface Props {
+  duck: Duck;
+}
+
+const { duck } = Astro.props;
+const modes = [duck.primary, duck.secondary];
+---
+
+<a class="duck" href={duck.href} style={`--duck-accent: ${duck.accent}`}>
+  <span class="duck__icon"><Icon name={duck.icon} /></span>
+
+  <div class="duck__header">
+    <h3 class="duck__label">{duck.label}</h3>
+    <span class="duck__role">{duck.role}</span>
+  </div>
+
+  <dl class="duck__modes">
+    {
+      modes.map((mode) => (
+        <Fragment>
+          <dt class="duck__term">{mode.term}</dt>
+          <dd class="duck__desc">
+            {mode.desc && <span class="duck__desc-text" set:html={mode.desc} />}
+            {mode.commands && mode.commands.length > 0 && (
+              <span class="duck__cmds">
+                {mode.commands.map((cmd) => (
+                  <code>/{cmd}</code>
+                ))}
+              </span>
+            )}
+          </dd>
+        </Fragment>
+      ))
+    }
+  </dl>
+</a>
+
+<style>
+  .duck {
+    position: relative;
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    padding: 1.4rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    background: var(--sl-color-gray-6);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .duck:hover {
+    border-color: var(--duck-accent);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  }
+
+  .duck:focus-visible {
+    outline: 2px solid var(--duck-accent);
+    outline-offset: 2px;
+  }
+
+  /* accent icon pinned to the top-right corner, out of the flow so it never
+     inflates the header height */
+  .duck__icon {
+    position: absolute;
+    top: 1.4rem;
+    right: 1.4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--duck-accent) 16%, transparent);
+    color: var(--duck-accent);
+  }
+
+  .duck__icon :global(svg) {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  /* title + agent name stacked tightly */
+  .duck__header {
+    padding-right: 2.5rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .duck__label {
+    margin: 0;
+    color: var(--duck-accent);
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .duck__role {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--sl-color-gray-3);
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  /* auto/manual as a two-column table (term, description) */
+  .duck__modes {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.85rem;
+    row-gap: 0.5rem;
+    margin: 0;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--sl-color-gray-5);
+  }
+
+  .duck__term {
+    color: var(--sl-color-gray-3);
+    font-size: 0.72rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .duck__desc {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin: 0;
+    color: var(--sl-color-gray-2);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  /* `<strong>` inside a duck description (injected via set:html) pops white */
+  .duck__desc :global(strong) {
+    color: var(--sl-color-white);
+    font-weight: 600;
+  }
+
+  .duck__cmds {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .duck__cmds code {
+    border-radius: 0.3rem;
+    background: var(--sl-color-gray-5);
+    padding: 0.1rem 0.4rem;
+    color: var(--sl-color-gray-1);
+    font-family: var(--__sl-font-mono);
+    font-size: 0.72rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .duck {
+      transition: none;
+    }
+
+    .duck:hover {
+      transform: none;
+    }
+  }
+</style>

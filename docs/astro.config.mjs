@@ -40,6 +40,9 @@ export default defineConfig({
         },
       ],
       title: 'autoducks',
+      components: {
+        PageTitle: './src/components/overrides/PageTitle.astro',
+      },
       logo: {
         light: './src/assets/logo-light.svg',
         dark: './src/assets/logo-dark.svg',
