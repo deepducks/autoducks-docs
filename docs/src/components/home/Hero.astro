@@ -2,8 +2,6 @@
 import logo from '../../assets/logo-dark.svg';
 import Carousel from './Carousel.astro';
 
-const installCommand = 'npx autoducks install';
-
 const badges = ['Spec-driven', 'Ralph Loops', 'Backpressure', 'Deterministic Orchestration'];
 ---
 
@@ -22,11 +20,15 @@ const badges = ['Spec-driven', 'Ralph Loops', 'Backpressure', 'Deterministic Orc
       {badges.map((badge) => <li class="hero__badge">{badge}</li>)}
     </ul>
 
-    <div class="hero__install">
-      <pre class="hero__snippet"><code>{installCommand}</code></pre>
-      <button class="hero__copy" type="button" data-copy={installCommand} aria-label="Copy install command">
-        <span class="hero__copy-label">Copy</span>
-      </button>
+    <div class="hero__cta">
+      <a class="hero__btn hero__btn--primary" href="https://github.com/apps/autoducks/installations/new">
+        <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" /></svg>
+        Install in GitHub
+      </a>
+      <a class="hero__btn hero__btn--ghost" href="/getting-started/introduction/">
+        View docs
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" aria-hidden="true"><path d="M5 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </a>
     </div>
   </div>
 
@@ -34,28 +36,6 @@ const badges = ['Spec-driven', 'Ralph Loops', 'Backpressure', 'Deterministic Orc
     <Carousel />
   </div>
 </section>
-
-<script is:inline>
-  (function () {
-    var button = document.querySelector('.hero__copy');
-    if (!button) return;
-    var label = button.querySelector('.hero__copy-label');
-    button.addEventListener('click', function () {
-      var text = button.getAttribute('data-copy') || '';
-      if (!navigator.clipboard) return;
-      navigator.clipboard.writeText(text).then(function () {
-        if (!label) return;
-        var original = label.textContent;
-        label.textContent = 'Copied';
-        button.classList.add('is-copied');
-        setTimeout(function () {
-          label.textContent = original;
-          button.classList.remove('is-copied');
-        }, 1600);
-      });
-    });
-  })();
-</script>
 
 <style>
   .hero {
@@ -145,72 +125,54 @@ const badges = ['Spec-driven', 'Ralph Loops', 'Backpressure', 'Deterministic Orc
     letter-spacing: 0.04em;
   }
 
-  .hero__install {
+  .hero__cta {
     display: flex;
-    align-items: stretch;
-    gap: 0.5rem;
-    width: 100%;
-    max-width: 26rem;
-    margin-top: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.6rem;
   }
 
-  .hero__snippet {
-    display: flex;
-    align-items: center;
-    flex: 1 1 auto;
-    min-width: 0;
-    margin: 0;
-    padding: 0.7rem 1rem;
-    overflow-x: auto;
-    border: 1px solid var(--sl-color-gray-5);
-    border-radius: 0.5rem;
-    background: var(--sl-color-gray-6);
-    color: var(--sl-color-gray-1);
-    font-family: var(--__sl-font-mono);
-    font-size: 0.9rem;
-    text-align: left;
-    white-space: pre;
-  }
-
-  .hero__snippet code {
-    background: transparent;
-    padding: 0;
-    border: none;
-    color: inherit;
-    font: inherit;
-  }
-
-  .hero__snippet code::before {
-    content: '$ ';
-    color: var(--sl-color-gray-3);
-  }
-
-  .hero__copy {
+  .hero__btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0 0.85rem;
-    border: 1px solid var(--sl-color-gray-5);
+    gap: 0.5rem;
+    padding: 0.62rem 1.15rem;
     border-radius: 0.5rem;
-    background: var(--sl-color-gray-6);
-    color: var(--sl-color-gray-2);
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: border-color 0.15s ease, color 0.15s ease;
+    border: 1px solid transparent;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: filter 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+      background 0.15s ease;
   }
 
-  .hero__copy:hover {
+  .hero__btn svg {
+    flex: none;
+  }
+
+  .hero__btn--primary {
+    background: var(--sl-color-accent);
+    border-color: var(--sl-color-accent);
+    color: #fff;
+  }
+
+  .hero__btn--primary:hover {
+    filter: brightness(1.12);
+  }
+
+  .hero__btn--ghost {
+    background: var(--sl-color-gray-6);
+    border-color: var(--sl-color-gray-5);
+    color: var(--sl-color-gray-1);
+  }
+
+  .hero__btn--ghost:hover {
     border-color: var(--sl-color-accent);
     color: var(--sl-color-white);
   }
 
-  .hero__copy.is-copied {
-    border-color: var(--sl-color-accent);
-    color: var(--sl-color-accent-high);
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .hero__copy {
+    .hero__btn {
       transition: none;
     }
   }

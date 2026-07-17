@@ -9,9 +9,15 @@ const knobs = [
   'Harness configuration (MCPs, tools, settings, hooks, etc.)',
 ];
 
-const commands = [
-  { cmd: 'npx autoducks wizard', desc: 'Wizard' },
-  { cmd: 'npx autoducks config', desc: 'TUI config editor' },
+const tools = [
+  {
+    name: 'Setup wizard',
+    desc: 'A guided wizard picks your repo and automations in the browser, then opens the setup PR.',
+  },
+  {
+    name: 'Config editor',
+    desc: 'Change any setting later in a visual editor — it opens a PR with the diff.',
+  },
 ];
 
 const scopes = [
@@ -50,10 +56,10 @@ const scopes = [
 
   <div class="customize__commands">
     {
-      commands.map((entry) => (
+      tools.map((tool) => (
         <div class="customize__command">
-          <pre class="customize__snippet"><code>{entry.cmd}</code></pre>
-          <p class="customize__command-desc">{entry.desc}</p>
+          <p class="customize__tool-name">{tool.name}</p>
+          <p class="customize__command-desc">{tool.desc}</p>
         </div>
       ))
     }
@@ -175,30 +181,11 @@ const scopes = [
     background: var(--sl-color-gray-6);
   }
 
-  .customize__snippet {
+  .customize__tool-name {
     margin: 0;
-    padding: 0.7rem 1rem;
-    overflow-x: auto;
-    border: 1px solid var(--sl-color-gray-5);
-    border-radius: 0.5rem;
-    background: var(--sl-color-gray-7);
-    color: var(--sl-color-gray-1);
-    font-family: var(--__sl-font-mono);
-    font-size: 0.85rem;
-    white-space: pre;
-  }
-
-  .customize__snippet code {
-    background: transparent;
-    padding: 0;
-    border: none;
-    color: inherit;
-    font: inherit;
-  }
-
-  .customize__snippet code::before {
-    content: '$ ';
-    color: var(--sl-color-gray-3);
+    color: var(--sl-color-white);
+    font-size: 0.95rem;
+    font-weight: 600;
   }
 
   .customize__command-desc {
