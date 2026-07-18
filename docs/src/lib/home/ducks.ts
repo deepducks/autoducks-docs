@@ -1,11 +1,11 @@
 /**
  * Home "Meet your ducks" data.
  *
- * The eight autos mirror the CLI's single source of truth
- * (`cli/src/core/autos.ts` + the wizard's verbatim copy in
- * `cli/src/commands/wizard.tsx`). Each duck is one automatable workflow with
- * two modes: a default/event-driven `primary` and an alternate/manual
- * `secondary`. Keep labels and slash commands in sync with those files.
+ * The eight autos are the automatable workflows the setup wizard and config
+ * editor expose (product, architect, engineer, waves, reviewer, rework,
+ * resolver, checks). Each duck is one workflow with two modes: a
+ * default/event-driven `primary` and an alternate/manual `secondary`. Keep
+ * labels and slash commands in sync with the configuration reference.
  */
 
 export interface DuckMode {
