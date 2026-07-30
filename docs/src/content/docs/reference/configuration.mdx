@@ -25,6 +25,15 @@ autoducks is configured via `.autoducks/autoducks.json` at the root of your repo
     "integration_branch": "main",
     "merge_method": "auto"
   },
+  "setup": {
+    "repo_settings": {
+      "enabled": true,
+      "allow_auto_merge": true,
+      "delete_branch_on_merge": true,
+      "assert_merge_method": true,
+      "propagate_to_children": true
+    }
+  },
   "orchestrator": {
     "mode": "waves"
   },
@@ -188,6 +197,74 @@ Method for auto-merging task/fix PRs into the pipeline branch. **Default:** `aut
 | `merge` / `squash` / `rebase` | Force one method |
 
 `auto` keeps autoducks working on squash-only or rebase-only repos without configuration.
+
+## `setup`
+
+Repository-settings automation applied when a repository is onboarded through the **cloud setup wizard**. The wizard's Worker mints a short-lived, `administration`-scoped GitHub App installation token to make these mutations and never hands that token to a GitHub Actions runner.
+
+<Aside type="note">
+This is distinct from `scripts/setup.sh` (see [Setup checks](/getting-started/installation#setup-checks)), whose token deliberately excludes the `administration` permission — it only checks and reports on repository settings, it never asserts them. Everything in this section is asserted by the cloud wizard only.
+</Aside>
+
+An absent `setup` block — or an absent `setup.repo_settings` block — means every key below is at its default; a pre-existing installation needs no migration to pick this up.
+
+### `setup.repo_settings`
+
+| Key | Default | Description |
+|---|---|---|
+| `enabled` | `true` | Master switch for the whole block. `false` disables everything below: no repository `GET`/`PATCH`, and no propagation to metarepo children. |
+| `allow_auto_merge` | `true` | Enables GitHub auto-merge on the repository. Required for metarepo child delivery, where a child's task PRs must merge unattended. |
+| `delete_branch_on_merge` | `true` | Deletes head branches automatically once their PR merges. |
+| `assert_merge_method` | `true` | Enables the [merge-method derivation](#merge-method-derivation) below. |
+| `propagate_to_children` | `true` | For a metarepo (`metarepo.enabled: true`), also applies this same plan to every same-owner submodule child — see [Metarepo child propagation (C2)](#metarepo-child-propagation-c2). |
+
+### Merge-method derivation
+
+When `assert_merge_method` is `true`, [`defaults.merge_method`](#defaultsmerge_method) selects at most one repository merge-method flag to turn on:
+
+| `defaults.merge_method` | Flag asserted |
+|---|---|
+| `squash` | `allow_squash_merge` |
+| `merge` | `allow_merge_commit` |
+| `rebase` | `allow_rebase_merge` |
+| `auto` (or absent) | none |
+
+Only the single flag matching the configured method is ever asserted — never all three, and never one the repository doesn't need yet. `auto` already probes the repository's existing allowed methods at merge time rather than committing to one ahead of time, so there's nothing for setup to widen on its behalf.
+
+### Metarepo children always get `allow_merge_commit`
+
+A metarepo child gets `allow_merge_commit` asserted `true` regardless of its own `defaults.merge_method`, because protected delivery to a metarepo parent always merges a child's task PRs with a merge commit. This exception only applies when [propagation](#metarepo-child-propagation-c2) is asserting settings on a child — it never changes what a repository's own direct setup run derives for itself.
+
+### Assert-only-upward
+
+Every mutation in this block is additive: it only ever sets a flag to `true`, never to `false`, and never disables a merge method. Three consequences follow:
+
+- **A setting already enabled — by a human or other tooling — is left alone.** There's nothing here that turns a flag back off.
+- **No merge method is ever disabled.** Asserting the flag for one method never narrows out others the repository already allows.
+- **Re-running setup is a safe no-op.** Applying the plan is idempotent: the Worker first `GET`s the repository's current settings, computes only the keys that differ from `true`, and `PATCH`es just that diff — skipping the `PATCH` call entirely once every flag is already correct.
+
+### Failure posture
+
+Repo-settings assertion is one step of the wizard's admin-gated setup, and — like the steps before it — it's best-effort: a failure here is collected as a warning and never fails the setup run, because the setup PR is the actual deliverable. Every warning names the affected repository and the manual remedy to apply the same change by hand:
+
+```bash
+gh api -X PATCH repos/<slug> -F <key>=true
+```
+
+<Aside type="caution">
+**`allow_auto_merge` can come back silently refused.** On a **private repository** on a plan **without protected branches**, GitHub's API accepts the `PATCH` and returns `200` — but leaves `allow_auto_merge` at `false` anyway, with no error to catch. The wizard surfaces this as a warning it cannot resolve from the setup flow itself; it does not prescribe a plan upgrade, since that's a decision for the repository owner, not the wizard.
+</Aside>
+
+### Metarepo child propagation (C2)
+
+When `metarepo.enabled: true` and `propagate_to_children` is not explicitly `false`, the same plan (with the [child exception](#metarepo-children-always-get-allow_merge_commit) above) is applied to every child discovered in the metarepo's `.gitmodules`, after the setup PR is opened:
+
+- **`.gitmodules` on the setup branch is the only source of truth** for parent → child relationships — never `metarepo.submodules` in `autoducks.json`, which can carry stale entries from repositories that are no longer children.
+- **Same-owner only.** A child whose remote resolves to a different GitHub owner than the parent installation's owner is skipped, with a warning naming the child.
+- **One narrowly scoped token per child.** Each child gets its own freshly-minted, single-repository-scoped admin token — never a token shared across children or reused from the parent's own admin setup.
+- **One unreachable child never aborts the rest.** A token-mint failure, a `GET`/`PATCH` failure, or a malformed `.gitmodules` entry for one child becomes a warning, and propagation continues with the next child.
+
+A fresh metarepo with no `.gitmodules` yet on the setup branch is skipped with no warning — there is nothing to propagate to.
 
 ## `orchestrator`
 
