@@ -60,6 +60,17 @@ autoducks is configured via `.autoducks/autoducks.json` at the root of your repo
     "max_issues_per_run": 100,
     "provisional_classification": true
   },
+  "update": {
+    "enabled": true,
+    "schedule": "23 6 * * 1",
+    "channel": "stable",
+    "pin": null,
+    "mode": "pr",
+    "auto_merge": "off",
+    "on_drift": "warn",
+    "notify_issue": null,
+    "source_repo": "deepducks/autoducks"
+  },
   "triggers": {
     "architect": [],
     "engineer":  [],
@@ -69,7 +80,8 @@ autoducks is configured via `.autoducks/autoducks.json` at the root of your repo
     "close":     [],
     "review":    [],
     "triage":    [],
-    "merge":     []
+    "merge":     [],
+    "update":    []
   },
   "context": {
     "developer": {
@@ -102,7 +114,8 @@ autoducks is configured via `.autoducks/autoducks.json` at the root of your repo
       "revert":  { "trusted_associations": ["OWNER", "MEMBER"] },
       "close":   { "trusted_associations": ["OWNER", "MEMBER"] },
       "product": { "trusted_associations": ["OWNER", "MEMBER", "COLLABORATOR"] },
-      "merge":   { "trusted_associations": ["OWNER", "MEMBER"] }
+      "merge":   { "trusted_associations": ["OWNER", "MEMBER"] },
+      "update":  { "trusted_associations": ["OWNER", "MEMBER"] }
     }
   }
 }
