@@ -1,0 +1,205 @@
+---
+title: Updates
+description: The update block, channels, pinning and rollback, drift detection, the release/changelog contract, and the migration-script contract.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The **Update Agent** (`/update`) keeps an installed autoducks tree current with `update.source_repo` (a fork or the upstream `deepducks/autoducks`). It runs on a schedule, on `workflow_dispatch`, and on an `/update` comment; checks the configured `channel` for a newer version; runs every applicable [migration](#the-migration-script-contract); and delivers the result as a pull request, a direct commit, or nothing at all, per [`update.mode`](#updatemode). Like Revert and Close, it sits **outside** the design → plan → execute pipeline: no stage labels, no Definition-of-Ready cascade.
+
+See [Utility Agents](https://github.com/deepducks/autoducks/blob/main/.autoducks/design/AGENTS.md#utility-agents) for where it sits in the overall agent architecture.
+
+## The `update` block
+
+```json
+{
+  "update": {
+    "enabled": true,
+    "schedule": "23 6 * * 1",
+    "channel": "stable",
+    "pin": null,
+    "mode": "pr",
+    "auto_merge": "off",
+    "on_drift": "warn",
+    "notify_issue": null,
+    "source_repo": "deepducks/autoducks"
+  }
+}
+```
+
+Every key below is optional — an absent `update` block, or an absent key within it, resolves to its documented default. Every value is **clamped, never fatal**: an illegal value falls back to the default rather than failing the run.
+
+### `update.enabled`
+
+**Legal values:** `true` / `false` · **Default:** `true`
+
+Master switch. `false` removes the `schedule:` trigger from the baked workflow entirely (same mechanism as [`product.enabled`](/reference/configuration#productenabled) — GitHub's `on.schedule` cron is static YAML and can't read config at run time, so this requires `bash scripts/update-triggers.sh` after changing it). `workflow_dispatch` and `/update` keep working either way.
+
+<Aside type="note">
+This is checked with an explicit `if .update.enabled == false then …` — not `.update.enabled // true` — so `"enabled": false` resolves to disabled rather than being swallowed by jq's `//` treating `false` the same as absent.
+</Aside>
+
+### `update.schedule`
+
+**Legal values:** any cron expression · **Default:** `"23 6 * * 1"` (06:23 UTC every Monday)
+
+Baked into `.github/workflows/autoducks-update.yml`'s `schedule:` trigger by `scripts/update-triggers.sh`, for the same reason as `update.enabled`. See [Operational caveats](#operational-caveats) for what GitHub's `schedule:` trigger does and doesn't guarantee.
+
+### `update.channel`
+
+**Legal values:** `stable` / `edge` · **Default:** `stable`. An unrecognized value falls back to `stable`.
+
+| Channel | Tracks |
+|---|---|
+| `stable` | The latest tagged release of `source_repo` |
+| `edge` | The tip of `source_repo`'s default branch — whatever has merged, tag or no tag |
+
+### `update.pin`
+
+**Legal values:** any string (a version, e.g. `"0.1.0"`, or a commit SHA) · **Default:** `null` (unset — track `channel` normally). Passed through unclamped.
+
+When set, the updater targets exactly that ref instead of `channel`'s latest — this is the pinning mechanism, and also how you roll back. See [Pinning and rollback](#pinning-and-rollback).
+
+### `update.mode`
+
+**Legal values:** `pr` / `commit` / `off` · **Default:** `pr`. An unrecognized value falls back to `pr`.
+
+| Value | Behavior |
+|---|---|
+| `pr` | Opens a machinery-update pull request (default) |
+| `commit` | Commits the update directly to the default branch — no PR, no review step |
+| `off` | The agent still runs (on schedule, dispatch, or `/update`) but makes no change — a kill switch that doesn't touch the trigger surface |
+
+### `update.auto_merge`
+
+**Legal values:** `off` / `patch` / `minor` · **Default:** `off`. An unrecognized value — **including `major`, which is not legal** — falls back to `off`.
+
+Whether the update PR ([`mode: pr`](#updatemode)) merges itself once opened, bounded by the size of the version bump (`semver::bump_kind` classifies `major`/`minor`/`patch`/`none`/`downgrade`):
+
+| Value | Merges automatically when the bump is |
+|---|---|
+| `off` | never — every update always waits for a human |
+| `patch` | `patch` only |
+| `minor` | `patch` or `minor` |
+
+A **`major`** bump is never a legal `auto_merge` target — it always waits for a human, regardless of this setting. Has no effect under `mode: commit` (there's no PR to merge) or `mode: off`.
+
+### `update.on_drift`
+
+**Legal values:** `warn` / `abort` · **Default:** `warn`. An unrecognized value falls back to `warn`.
+
+Controls what happens when the updater detects **drift** — see [Drift detection](#drift-detection).
+
+| Value | Behavior |
+|---|---|
+| `warn` | Proceed with the update anyway; the drifted paths are called out in the PR/commit description or job summary |
+| `abort` | Stop before making any change; the drifted paths are reported for a human to reconcile first |
+
+### `update.notify_issue`
+
+**Legal values:** an issue number · **Default:** `null` (unset). A non-numeric value falls back to unset.
+
+When a scheduled or dispatched update run fails, the workflow's failure watchdog comments on this issue instead of only writing to the job summary — useful for routing update failures to wherever your team already watches (e.g. a pinned "autoducks maintenance" issue).
+
+### `update.source_repo`
+
+**Legal values:** an `owner/repo` string · **Default:** `"deepducks/autoducks"`
+
+Where machinery updates come from. Point this at a fork to track a customized upstream instead of the canonical repository.
+
+## Pinning and rollback
+
+`update.pin` is both the pinning mechanism and the one-step rollback path — no need to read `run.sh` to use it.
+
+**To pin** (stop tracking `channel`'s latest, staying on a known-good version):
+
+```json
+{ "update": { "pin": "0.1.0" } }
+```
+
+Commit that change to `autoducks.json`. Future update runs target `0.1.0` exactly, regardless of what's newer on `channel`. A commit SHA works the same way as a version string.
+
+**To roll back after a bad update has already landed**, pick one:
+
+1. **Set `update.pin` to the previous version** — the value that was in `.autoducks/VERSION` before the update — and commit it. The next update run (or a manual `/update`) targets that pinned version instead of `channel`'s latest, the same pin mechanism described above.
+2. **Revert the update commit directly** — find the update commit or the merged update PR (labeled `Autoducks:update`) and:
+   ```bash
+   git revert -m 1 <merge-commit-sha>   # merge commit (mode: pr, default merge method)
+   git revert <commit-sha>              # plain commit (mode: commit, or a squash-merged PR)
+   git push
+   ```
+   This is the faster path when you just want the tree back to where it was, without needing the update agent to run again.
+
+Clear the pin (`"pin": null`, or delete the key) once you're ready to resume tracking `channel` normally.
+
+## Drift detection
+
+**Drift** is a difference between the vendored machinery on disk and what the installer/updater expects — in practice, a hand-edit to a file the updater is about to overwrite. It's computed by comparing the installed tree against everything **outside** the consumer-owned set in [`core/config/consumer-owned.sh`](https://github.com/deepducks/autoducks/blob/main/.autoducks/core/config/consumer-owned.sh):
+
+```
+autoducks.json
+providers/llm/claude/settings.json
+custom/
+plugins/
+security-guidelines.md
+```
+
+Everything in that list is yours — the updater never treats edits there as drift. Everything else under `.autoducks/` is vendored machinery; an edit there is drift, because the next update would silently clobber it.
+
+Drift detection depends on `.autoducks/.installed.json`, the lockfile `scripts/install.sh` writes on every install/update. Without it, the updater has no baseline to diff against — `scripts/setup.sh`'s update-policy check (below) flags a missing or unparseable lockfile and tells you to re-run the installer.
+
+What happens once drift is found is controlled by [`update.on_drift`](#updateon_drift): `warn` (proceed, call it out) or `abort` (stop, let a human reconcile it — typically by moving the customization into a [plugin](/guides/plugins) instead of editing vendored machinery directly).
+
+## The release/changelog contract
+
+Every release of `deepducks/autoducks` bumps `.autoducks/VERSION` and adds a new heading to `.autoducks/CHANGELOG.md`, in [Keep a Changelog](https://keepachangelog.com/) format:
+
+```md
+## [0.2.0] - 2026-08-01
+
+### Added
+- ...
+
+### Breaking
+- ...
+```
+
+- `## [VERSION] - DATE` starts a release section; everything until the next `## [` heading (or EOF) belongs to it.
+- `### Category` subsections underneath are free-form (`Added`, `Changed`, `Fixed`, `Removed`, ...) **except `### Breaking`, which is reserved**: it marks changes that require a consumer to do something before or after updating, independent of how big the version bump looks. A release can be a `patch` bump by semver and still carry a `### Breaking` section (e.g. a config default changing meaning) — mark it anyway.
+- This file is parsed by [`core/config/changelog.sh`](https://github.com/deepducks/autoducks/blob/main/.autoducks/core/config/changelog.sh): `changelog::range(from, to)` concatenates every release body in `(from, to]`, and `changelog::has_breaking(from, to)` reports whether any of them carries a `### Breaking` heading. This is the substrate the update agent uses to reason about what changed across a version jump — keeping the contract intact (one heading per release, `### Breaking` only when warranted) keeps that reasoning accurate.
+
+## The migration-script contract
+
+Config-shape changes — a new `update` block, a renamed key, a new required `security.per_agent` entry — ship as a migration, not a silent runtime default. Each one lives at `.autoducks/migrations/<version>/migrate.sh`, and the updater runs every migration whose `<version>` satisfies `installed.version < version <= target.version`, in ascending semver order, when moving a consumer install forward.
+
+A migration script must:
+
+- Be **idempotent** — running it again against an already-migrated config makes no further change.
+- Touch only **consumer-owned state** (in practice `autoducks.json`; see [`core/config/consumer-owned.sh`](https://github.com/deepducks/autoducks/blob/main/.autoducks/core/config/consumer-owned.sh) for the full list). Never edit vendored machinery.
+- **Exit non-zero only on a condition a human must resolve.** A migration that can complete on its own should complete on its own, not fail because something was merely unusual.
+- **Append human-readable prose to the report.** `AUTODUCKS_MIGRATION_REPORT` is set by the updater to the path of an append-only file; a migration that changes something appends a short description of the change (a run that changes nothing appends nothing).
+- **Never widen the security surface.** A migration may add a new `security.per_agent` entry, but must never remove an existing `security.deny` entry or broaden an existing `trusted_associations` list.
+
+You can run one directly, outside the update agent, the same way the updater does:
+
+```bash
+AUTODUCKS_ROOT=/path/to/.autoducks \
+AUTODUCKS_MIGRATION_REPORT=/tmp/migration-report.md \
+  bash .autoducks/migrations/0.2.0/migrate.sh
+```
+
+## Operational caveats
+
+- **First adoption is still manual.** The update agent updates an *existing* install; nothing bootstraps a fresh repository on its own. That still means either the one-time `curl -fsSL .../install.sh | bash` (see [Installation](/getting-started/installation)) or the cloud setup wizard.
+- **`schedule` only runs on the default branch.** This is a GitHub Actions constraint, not an autoducks one: a `schedule:` trigger only fires for the workflow file as it exists on the repository's default branch, regardless of where else it's committed.
+- **Cron firing is best-effort.** GitHub Actions does not guarantee a scheduled run fires at the exact minute — it can be delayed under platform load, and is skipped (not queued) if the runner pool is saturated.
+- **GitHub disables scheduled workflows after 60 days of repository inactivity.** A dormant repo (no pushes) silently stops firing `schedule:` triggers — including the update agent's. `workflow_dispatch` and `/update` are unaffected and remain the way to force a run on a quiet repository.
+
+## Identity requirement
+
+A machinery update always includes changes under `.github/workflows/` (the mirrored copies of `.autoducks/runtimes/github-actions/*.yml`). The default `GITHUB_TOKEN` GitHub Actions provides **cannot push workflow file changes** — this is a hard GitHub restriction, not an autoducks limitation — so whenever `update.enabled: true` and `update.mode` is not `off`, some other identity must be configured to do the pushing:
+
+- **`vars.AUTODUCKS_APP`** — the autoducks GitHub App broker, opt-in via this repository variable, or
+- **`AUTODUCKS_PAT`** — a repository secret holding a personal access token with the `workflow` scope.
+
+A bare `GITHUB_TOKEN` with neither of the above configured is **fatal** for this agent: `scripts/setup.sh`'s update-policy check (its 13th and final check) fails the setup run if `update.enabled: true` and `update.mode != off` but neither identity is present.

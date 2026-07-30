@@ -60,6 +60,17 @@ autoducks is configured via `.autoducks/autoducks.json` at the root of your repo
     "max_issues_per_run": 100,
     "provisional_classification": true
   },
+  "update": {
+    "enabled": true,
+    "schedule": "23 6 * * 1",
+    "channel": "stable",
+    "pin": null,
+    "mode": "pr",
+    "auto_merge": "off",
+    "on_drift": "warn",
+    "notify_issue": null,
+    "source_repo": "deepducks/autoducks"
+  },
   "triggers": {
     "architect": [],
     "engineer":  [],
@@ -69,7 +80,8 @@ autoducks is configured via `.autoducks/autoducks.json` at the root of your repo
     "close":     [],
     "review":    [],
     "triage":    [],
-    "merge":     []
+    "merge":     [],
+    "update":    []
   },
   "context": {
     "developer": {
@@ -102,7 +114,8 @@ autoducks is configured via `.autoducks/autoducks.json` at the root of your repo
       "revert":  { "trusted_associations": ["OWNER", "MEMBER"] },
       "close":   { "trusted_associations": ["OWNER", "MEMBER"] },
       "product": { "trusted_associations": ["OWNER", "MEMBER", "COLLABORATOR"] },
-      "merge":   { "trusted_associations": ["OWNER", "MEMBER"] }
+      "merge":   { "trusted_associations": ["OWNER", "MEMBER"] },
+      "update":  { "trusted_associations": ["OWNER", "MEMBER"] }
     }
   }
 }
@@ -419,9 +432,15 @@ When the open backlog exceeds this, the run is bounded and the excess is reporte
 
 Whether `/triage` classifies un-classified issues by applying the `Bug`/`Feature` label. The Architect remains the authoritative classifier and overrides the label if its design concludes differently. `false` disables triage classification entirely; `/triage` still assigns priorities and proposes duplicates.
 
+## `update`
+
+Configuration for the [Update Agent](https://github.com/deepducks/autoducks/blob/main/.autoducks/design/AGENTS.md#utility-agents) (`/update`) — keeps the installed machinery current from `update.source_repo`, on `update.schedule`, `workflow_dispatch`, or `/update`. Like Revert and Close, it sits outside the design → plan → execute pipeline.
+
+See the [Updates reference](/reference/updates) for every key (`enabled`, `schedule`, `channel`, `pin`, `mode`, `auto_merge`, `on_drift`, `notify_issue`, `source_repo`), pinning and rollback, drift detection, and the migration-script contract.
+
 ## `triggers` — custom trigger aliases
 
-Per-team alias verbs, keyed by agent (`architect`, `engineer`, `execute`, `fix`, `revert`, `close`, `review`, `triage`, `merge`):
+Per-team alias verbs, keyed by agent (`architect`, `engineer`, `execute`, `fix`, `revert`, `close`, `review`, `triage`, `merge`, `update`):
 
 ```json
 {
@@ -453,7 +472,7 @@ Each agent can have its own `.autoducks/agents/<agent>/defaults.json`:
 }
 ```
 
-Agent directories: `architect`, `engineer`, `maestro`, `developer`, `fix`, `revert`, `close`, `reviewer`, `product`.
+Agent directories: `architect`, `engineer`, `maestro`, `developer`, `fix`, `revert`, `close`, `reviewer`, `product`, `update`.
 
 **Priority (highest to lowest):**
 1. Directive argument in the comment (`model:`, `effort:`, `turns:`)
@@ -608,6 +627,6 @@ See [Reviewer → Bounded auto-rework loop](/agents/reviewer#bounded-auto-rework
 
 ## `security`
 
-Every trigger passes the [Authorization Gate](/reference/security) before any agent runs — before any reaction or status comment. The `security` block controls trusted author associations, allow/deny lists, per-agent overrides (keys: `architect`, `engineer`, `execute`, `fix`, `revert`, `close`, `review`, `product`, `merge` — the Maestro and Developer share the `execute` policy), and optional CODEOWNERS integration.
+Every trigger passes the [Authorization Gate](/reference/security) before any agent runs — before any reaction or status comment. The `security` block controls trusted author associations, allow/deny lists, per-agent overrides (keys: `architect`, `engineer`, `execute`, `fix`, `revert`, `close`, `review`, `product`, `merge`, `update` — the Maestro and Developer share the `execute` policy), and optional CODEOWNERS integration.
 
 See the [Security reference](/reference/security) for the full threat model and schema.
