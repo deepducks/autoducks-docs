@@ -75,11 +75,14 @@ The script checks and auto-creates what it can, and reports what requires manual
 
 2. **Required labels** — creates `Feature`, `Bug`, `Task`, `Draft`, `smoke-test`, and the stage labels if they don't exist.
 
-3. **LLM provider secret** — checks that the repository has an LLM credential: `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, or a custom endpoint (`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`). If none is set, prints the command to add one:
-   ```bash
-   gh secret set ANTHROPIC_API_KEY --repo OWNER/REPO
-   ```
-   See [LLM credentials](#llm-credentials) for the three options.
+3. **LLM provider secret** — checks that the repository has an LLM credential: `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, or a custom endpoint (`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`). Each of these may live as a **repository secret or an organization secret** — see [Repository vs. organization secrets](#repository-vs-organization-secrets). This check reports one of three outcomes:
+   - **Configured** — a credential resolved, either as a repository secret or an organization secret.
+   - **"Could not verify the LLM credential"** — listing organization secrets was refused (needs org-owner access), so the script cannot tell whether an org-level credential covers this repo. This is *not* a failure: if the credential is in fact set at the organization level, the repository is fine.
+   - **"No LLM credential is configured"** — no credential was found at either tier. Prints the command to add one:
+     ```bash
+     gh secret set ANTHROPIC_API_KEY --repo OWNER/REPO
+     ```
+   See [LLM credentials](#llm-credentials) for the three credential options.
 
 4. **Runtime workflow permissions** — checks for `write` permissions and `can_approve_pull_request_reviews: true` on GitHub Actions. Prints the fix command if wrong.
 
@@ -129,6 +132,25 @@ The base URL is not sensitive, so it can also be a repository **variable** (`gh 
 <Aside type="caution">
 `ANTHROPIC_BASE_URL` wins over `CLAUDE_CODE_OAUTH_TOKEN`. A subscription token is only valid against `api.anthropic.com`, and Claude Code prefers it over the API key — so when a custom endpoint is configured, the agents drop the OAuth token and send the custom credential instead. Set the model in `.autoducks/autoducks.json` (or per run with `model:`) to whatever your gateway exposes.
 </Aside>
+
+### Repository vs. organization secrets
+
+Every credential above (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`) can be set as a **repository secret** or an **organization secret**. GitHub resolves a name at run time in this order: **environment > repository > organization** — the first tier that defines the name wins, regardless of which tier was set most recently.
+
+An organization secret only reaches a given repository if its visibility is `all`, or is `selected` and that repository is on the list.
+
+<Aside type="caution">
+**Free-plan caveat:** on a Free organization, an organization secret reaches **public** repositories only — even when its visibility is `selected` and a private repository is on the list. GitHub's API accepts adding a private repository to a secret's `selected` list without any error, but the value resolves **empty** at run time in that repository, which fails silently (the agent step errors with no credential, not with a clear "wrong tier" message).
+
+Fix one of two ways:
+- Add the same credential as a **repository-level secret** instead — repository secrets behave identically on public and private repos regardless of plan:
+  ```bash
+  gh secret set ANTHROPIC_API_KEY --repo OWNER/REPO
+  ```
+- Upgrade the organization to **Team or Enterprise**, where organization secrets reach private repositories normally.
+</Aside>
+
+**Shadowing:** if a repository-level secret and an organization-level secret share the same name, the repository copy always wins (per the precedence order above) and the organization copy is silently ignored for that repo. A common failure mode is a leftover repository-level secret from before the credential was centralized at the org level — rotating the organization secret then has no effect on that repository until the repository-level copy is removed.
 
 ## Updating
 
