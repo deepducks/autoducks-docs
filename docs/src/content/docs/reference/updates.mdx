@@ -202,4 +202,6 @@ A machinery update always includes changes under `.github/workflows/` (the mirro
 - **`vars.AUTODUCKS_APP`** — the autoducks GitHub App broker, opt-in via this repository variable, or
 - **`AUTODUCKS_PAT`** — a repository secret holding a personal access token with the `workflow` scope.
 
-A bare `GITHUB_TOKEN` with neither of the above configured is **fatal** for this agent: `scripts/setup.sh`'s update-policy check (its 13th and final check) fails the setup run if `update.enabled: true` and `update.mode != off` but neither identity is present.
+A bare `GITHUB_TOKEN` with neither of the above configured means this agent cannot deliver. `scripts/setup.sh`'s update-policy check (check 13) reports it as a **manual action item** — ⚠️, not ❌ — when `update.enabled: true` and `update.mode != off` but neither identity is present.
+
+Note that this does **not** fail the setup run: `setup.sh` exits `0` with manual items outstanding, so a CI job that only asserts its exit status will not catch a missing identity. If you want that to be fatal in your pipeline, assert on the check's output, or set `update.mode: off` until an identity is configured.
