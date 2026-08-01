@@ -1,6 +1,6 @@
 ---
 title: Product Owner
-description: Grooms the backlog — priorities and duplicate closes — on a schedule or on demand via /triage, plus the deterministic /merge command.
+description: Grooms the backlog — priorities and duplicate flagging — on a schedule or on demand via /triage, plus the deterministic /merge command.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -11,7 +11,7 @@ import Mermaid from '../../../components/Mermaid.astro';
 /merge #<issue>
 ```
 
-The Product Owner keeps the backlog groomed: it assigns priorities to un-prioritized issues and proposes duplicate groupings, either automatically (a daily schedule sweep, or immediately when a new issue is opened) or on demand via `/triage`. `/merge #<issue>` is its deterministic sibling — no LLM involved — for manually folding one issue into another.
+The Product Owner keeps the backlog groomed: it assigns priorities to un-prioritized issues and flags likely duplicates, either automatically (a daily schedule sweep, or immediately when a new issue is opened) or on demand via `/triage`. It never closes a duplicate — it labels and cross-references both issues, and you decide which one is redundant. `/merge #<issue>` is its deterministic sibling — no LLM involved — for manually folding one issue into another, and that one does close.
 
 **Type:** Hybrid — triage is LLM (Claude), merge is pure Bash · **Scripts:** `.autoducks/agents/product/{pre,post}.sh` (triage), `.autoducks/agents/product/merge.sh` (merge) · **Verbs:** `triage`, `merge`
 
@@ -19,7 +19,7 @@ The Product Owner keeps the backlog groomed: it assigns priorities to un-priorit
 flowchart LR
     Triggers@{ shape: bolt, label: "Triggers\\n(schedule, issues.opened,\\n/triage, /merge)" }
     Product["Product Owner"]
-    Backlog@{ shape: notch-rect, label: "Priorities set\\nDuplicates closed" }
+    Backlog@{ shape: notch-rect, label: "Priorities set\\nDuplicates flagged" }
 
     Triggers --triggers--> Product
     Product -- grooms --> Backlog
@@ -51,8 +51,8 @@ None — like the other utility commands, `/triage` and `/merge` run against any
 1. Reacts 👀 and posts the status comment for a human-initiated run (a real `/triage` comment); an event-driven run (schedule, `issues.opened`) has no comment to react to, so it narrates through the job summary instead.
 2. **Gathers the inbox** (`pre.sh`): a **single issue** when scoped (issues.opened, or `/triage` on a specific issue), otherwise a **full sweep** of up to `product.max_issues_per_run` open issues. For a sweep, a cheap `its::search_issues` keyword pre-filter flags candidate duplicate pairs (`dedup_candidates`) as a hint — not a verdict — and every issue is annotated with whether it already carries a priority.
 3. **[LLM]** Reads `/tmp/triage-inbox.md`/`.json` and writes `/tmp/triage-decisions.json` **only**: proposed `priorities` (`Critical`/`High`/`Medium`/`Low`, each with a rationale), sweep-only proposed `duplicates` groupings (`canonical` + `duplicates` + `confidence` + rationale), and — when `product.provisional_classification` is enabled — a proposed `Feature`/`Bug` classification hint for any issue that doesn't yet carry one. Read-only `git`/`gh` exploration is permitted; mutating `git`/`gh` commands and `Edit` remain forbidden.
-4. `post.sh` **validates the decision file deterministically** (`core/robustness/validate-triage-decisions.py`): enforces the named-priority vocabulary, drops duplicate groups below `product.confidence_threshold`, caps closes at `product.max_closes_per_run`, and de-duplicates across groups so no issue is claimed twice. Malformed or rejected entries are dropped and reported in the job summary — never fatal to the run.
-5. **Applies** the accepted priorities (skipping anything already prioritized or already closed) via `its::set_priority`, and closes accepted duplicates via `its::close_issue` (reason `not_planned`) — skipping any duplicate whose delivery phase has already started (a `Work:*` label or a live pipeline branch) — then leaves a cross-reference comment on each canonical issue naming what was folded in.
+4. `post.sh` **validates the decision file deterministically** (`core/robustness/validate-triage-decisions.py`): enforces the named-priority vocabulary, drops duplicate groups below `product.confidence_threshold`, caps how many groups are acted on at `product.max_closes_per_run`, and de-duplicates across groups so no issue is claimed twice. Malformed or rejected entries are dropped and reported in the job summary — never fatal to the run.
+5. **Applies** the accepted priorities (skipping anything already prioritized or already closed) via `its::set_priority`, and flags accepted duplicates via `fold_duplicate::reference` — labelling the duplicate `Duplicate` and pointing it at the canonical — skipping any duplicate whose delivery phase has already started (a `Work:*` label or a live pipeline branch) — then leaves a cross-reference comment on each canonical issue naming what was flagged. Nothing is closed: the sweep is acting on an LLM's opinion about issues nobody pointed it at, so the decision to close is left to a person, at a moment of their choosing.
 6. **Applies** the accepted classification, when present, as the `Bug`/`Feature` label — the same label the Architect uses — which the Architect later confirms or overrides during design. Disable entirely with `product.provisional_classification: false`.
 7. `dry_run: true` (workflow-dispatch only) describes the proposal without applying anything.
 

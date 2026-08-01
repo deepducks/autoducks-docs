@@ -54,7 +54,7 @@ autoducks is configured via `.autoducks/autoducks.json` at the root of your repo
     "priority_backend": "auto",
     "project_number": null,
     "priority_field": "Priority",
-    "auto_merge_duplicates": true,
+    "flag_duplicates": true,
     "max_closes_per_run": 5,
     "confidence_threshold": "high",
     "max_issues_per_run": 100,
@@ -406,15 +406,21 @@ Pins the `project` backend to a specific Projects v2 board by number, when a rep
 
 The Projects v2 single-select field name that represents priority, matched case-insensitively. **Default:** `"Priority"`
 
-### `product.auto_merge_duplicates`
+### `product.flag_duplicates`
 
-Whether `/triage` proposes and applies duplicate-issue closes at all. **Default:** `true`
+Whether `/triage` looks for duplicates at all. **Default:** `true`
+
+When it finds one it labels the duplicate `Duplicate` and cross-references the canonical from both sides. It does **not** close anything — deciding which of two issues is redundant, and when, is left to a person. Use [`/merge`](/agents/product#merge) to actually fold one into the other.
 
 Only takes effect on a full backlog sweep — a scoped single-issue `/triage` never has anything to compare against, regardless of this setting.
 
+The previous name for this key was `auto_merge_duplicates`, from when the sweep did close duplicates. It is still read, so existing configs keep working: if you set it to `false` to keep triage out of your backlog, it still does that.
+
 ### `product.max_closes_per_run`
 
-Caps how many duplicates a single `/triage` sweep can close, to bound the blast radius of a bad LLM proposal. **Default:** `5`
+Caps how many duplicate groups a single `/triage` sweep will act on, to bound the blast radius of a bad LLM proposal. **Default:** `5`
+
+The name predates the behaviour — the sweep flags rather than closes, so this caps flagged groups.
 
 Groups are kept in the order proposed, greedily, until the next group would exceed the cap — the rest are dropped and reported in the job summary, not silently discarded.
 
